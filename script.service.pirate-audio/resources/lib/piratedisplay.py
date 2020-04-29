@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 import RPi.GPIO as GPIO
 import spidev
 import threading
