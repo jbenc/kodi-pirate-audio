@@ -16,6 +16,20 @@ want to control all home players by a single app.
 apt-get install python-rpi.gpio python-spidev python-pil
 ```
 
+## Debugging
+
+To see what is Kodi displaying, create `/tmp/piratekodiview` file to switch
+on a debug mode. Pressing one of the buttons then shows a corresponding part
+of Kodi screen (button A shows the top left part, etc). Note what you see is
+a screenshot, not a live view. To refresh the screen, press the button
+again. A long press of any of the buttons will switch off the screen.
+
+If you don't have a keyboard connected, use the remote control in web view
+or in Kore.
+
+Note that when Kodi is in a screen saver mode, the screenshot may show
+garbage. Press any button on the remote to dismiss the screen saver.
+
 ## Development
 
 The heart of the addon is a **piratedisplay** Python module. It is a from
