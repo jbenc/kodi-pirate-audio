@@ -63,6 +63,7 @@ class PirateDisplay:
 
         self._repeat_delay = 1.0 / button_repeat_hz
         self._user_event = event
+        self._user_timer = None
         # The RPi.GPIO software debouncing (bouncetime parameter) is not
         # working well. It also doesn't handle key releases that are needed
         # to detect continuous hold of a button. We're implementing own
@@ -114,9 +115,22 @@ class PirateDisplay:
             for t in self._button_state.values():
                 if t > 0 and (not timeout or t + self._repeat_delay < timeout):
                     timeout = t + self._repeat_delay
+            # mix in the user timer
+            t = self._user_timer
+            if t:
+                if not timeout or t[0] < timeout:
+                    timeout = t[0]
             if timeout:
                 timeout = max(timeout - time.time(), 0)
             self._button_interrupt.wait(timeout)
+
+            # fire the user timer if needed
+            t = self._user_timer
+            if t:
+                if time.time() >= t[0]:
+                    self._user_timer = None
+                    t[1](*t[2], **t[3])
+
             for pin in button_map:
                 self._button_reads[pin] = 0
             while True:
@@ -141,6 +155,15 @@ class PirateDisplay:
 
     def set_user_event(self, event):
         self._user_event = event
+
+
+    def set_user_timer(self, secs, event, *args, **kwargs):
+        self._user_timer = (time.time() + secs, event, args, kwargs)
+        self._button_interrupt.set()
+
+
+    def clear_user_timer(self):
+        self._user_timer = None
 
 
     def reset(self):
