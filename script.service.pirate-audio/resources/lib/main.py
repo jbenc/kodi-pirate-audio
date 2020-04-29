@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (c) 2020 Jiri Benc <jbenc@upir.cz>
 
 import xbmc
 import piratedisplay

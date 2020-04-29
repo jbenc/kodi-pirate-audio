@@ -2,7 +2,7 @@
 <addon id="script.service.pirate-audio"
        name="Pimoroni Pirate Audio"
        version="0.1.0"
-       provider-name="Upir">
+       provider-name="Jiri Benc">
   <requires>
     <import addon="xbmc.python" version="2.14.0"/>
   </requires>
