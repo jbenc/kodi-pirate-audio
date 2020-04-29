@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="script.service.pirate-audio"
+       name="Pimoroni Pirate Audio"
+       version="0.1.0"
+       provider-name="Upir">
+  <requires>
+    <import addon="xbmc.python" version="2.14.0"/>
+  </requires>
+  <extension point="xbmc.service" library="resources/lib/main.py" />
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_US">Pimoroni Pirate Audio board support</summary>
+    <description lang="en_US">Support for Pimoroni Pirate Audio boards. Displays currently playing media and allows controlling of Kodi by the on-board buttons.</description>
+    <platform>linux</platform>
+    <license>GPL-2.0-or-later</license>
+    <source>https://github.com/jbenc/kodi-pirate-audio</source>
+    <assets>
+      <icon>resources/icon.png</icon>
+      <fanart>resources/fanart.jpg</fanart>
+    </assets>
+    <news>v0.1.0 (2020-05-03)
+      [new] initial version
+    </news>
+  </extension>
+</addon>
