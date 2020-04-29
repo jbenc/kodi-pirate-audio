@@ -27,7 +27,6 @@ class PirateAddon(xbmc.Monitor):
                                                'method': method,
                                                'params': kwargs,
                                                'id': 1 }))
-        xbmc.log('pirate: {}'.format(res), level=xbmc.LOGERROR)
         res = json.loads(res)
         if 'error' in res:
             raise RpcError(res['error']['message'])
