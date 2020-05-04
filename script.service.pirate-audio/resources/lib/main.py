@@ -7,6 +7,26 @@ import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageEnhance
 import json, os, time
 
 
+def multiline_text(draw, xy, text, font, fill, spacing=4, max_rows=None):
+    row = 0
+    x, y = xy
+    height = font.getmetrics()
+    height = height[0] - height[1] + spacing
+    words = text.split()
+    words.reverse()
+    while words and (max_rows is None or row < max_rows):
+        line = []
+        while words:
+            line.append(words.pop())
+            width = draw.textsize(' '.join(line), font=font)[0]
+            if width > piratedisplay.WIDTH and len(line) > 1:
+                words.append(line.pop())
+                break
+        draw.text((x, y), ' '.join(line), font=font, fill=fill)
+        y += height
+        row += 1
+
+
 class RpcError(Exception):
     pass
 
@@ -126,9 +146,9 @@ class PirateAddon(xbmc.Monitor):
             # Python 3
             pass
         draw = self.new_overlay()
-        draw.text((0, 0), title, font=self.font_title, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
-        draw.text((0, 30), artist, font=self.font_sub, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
-        draw.text((0, 60), '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
+        draw.text((0, 0), artist, font=self.font_sub, fill=(255, 255, 255))
+        multiline_text(draw, (0, 30), title, font=self.font_title, fill=(255, 255, 255), max_rows=2)
+        draw.text((0, 90), '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(255, 255, 255))
         if redraw:
             self.redraw()
 
