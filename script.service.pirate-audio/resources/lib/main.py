@@ -64,13 +64,12 @@ class PirateAddon(xbmc.Monitor):
 
 
     def show(self, img, timeout=None, base=False):
+        self.disp.clear_user_timers()
         if timeout:
             if self.current == self.blank:
-                self.disp.set_user_timer(timeout, self.hide)
+                self.disp.add_user_timer(timeout, self.hide)
             else:
-                self.disp.set_user_timer(timeout, self.show_restore)
-        else:
-            self.disp.clear_user_timer()
+                self.disp.add_user_timer(timeout, self.show_restore)
         self.disp.show(img.tobytes())
         self.disp.wake()
         if base:
@@ -82,7 +81,7 @@ class PirateAddon(xbmc.Monitor):
 
 
     def hide(self):
-        self.disp.clear_user_timer()
+        self.disp.clear_user_timers()
         self.disp.sleep()
         self.current = self.blank
 

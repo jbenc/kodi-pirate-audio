@@ -63,7 +63,9 @@ class PirateDisplay:
 
         self._repeat_delay = 1.0 / button_repeat_hz
         self._user_event = event
-        self._user_timer = None
+        self._user_timers = []
+        self._next_user_timer = None
+        self._user_timer_lock = threading.Lock()
         # The RPi.GPIO software debouncing (bouncetime parameter) is not
         # working well. It also doesn't handle key releases that are needed
         # to detect continuous hold of a button. We're implementing own
@@ -115,20 +117,33 @@ class PirateDisplay:
             for t in self._button_state.values():
                 if t > 0 and (not timeout or t + self._repeat_delay < timeout):
                     timeout = t + self._repeat_delay
-            # mix in the user timer
-            t = self._user_timer
+            # mix in user timers
+            t = self._next_user_timer
             if t:
-                if not timeout or t[0] < timeout:
-                    timeout = t[0]
+                if not timeout or t < timeout:
+                    timeout = t
             if timeout:
                 timeout = max(timeout - time.time(), 0)
             self._button_interrupt.wait(timeout)
 
-            # fire the user timer if needed
-            t = self._user_timer
-            if t:
-                if time.time() >= t[0]:
-                    self._user_timer = None
+            # fire user timers if needed
+            if self._user_timers:
+                self._user_timer_lock.acquire()
+                cur_time = time.time()
+                fire_timers = []
+                new_timers = []
+                new_next = None
+                for t in self._user_timers:
+                    if cur_time >= t[0]:
+                        fire_timers.append(t)
+                    else:
+                        new_timers.append(t)
+                        if new_next is None or t[0] < new_next:
+                            new_next = t[0]
+                self._next_user_timer = new_next
+                self._user_timers = new_timers
+                self._user_timer_lock.release()
+                for t in fire_timers:
                     t[1](*t[2], **t[3])
 
             for pin in button_map:
@@ -157,13 +172,19 @@ class PirateDisplay:
         self._user_event = event
 
 
-    def set_user_timer(self, secs, event, *args, **kwargs):
-        self._user_timer = (time.time() + secs, event, args, kwargs)
+    def add_user_timer(self, secs, event, *args, **kwargs):
+        t = time.time() + secs
+        self._user_timer_lock.acquire()
+        self._user_timers.append((t, event, args, kwargs))
+        if self._next_user_timer is None or self._next_user_timer > t:
+            self._next_user_timer = t
+        self._user_timer_lock.release()
         self._button_interrupt.set()
 
 
-    def clear_user_timer(self):
-        self._user_timer = None
+    def clear_user_timers(self):
+        self._user_timers = []
+        self._next_user_timer = None
 
 
     def reset(self):
