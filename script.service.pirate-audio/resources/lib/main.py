@@ -131,9 +131,14 @@ class PirateAddon(xbmc.Monitor):
         self.disp.wake()
 
 
-    def set_playing_info(self, timer_id=None, redraw=True):
+    def set_playing_info(self, timer_id=None, initial=False):
         duration = xbmc.getInfoLabel('Player.Duration')
-        elapsed = xbmc.getInfoLabel('Player.Time')
+        if initial:
+            # when changing songs, Kodi returns old data for duration,
+            # workaround that
+            elapsed = ':'.join(['00'] * len(duration.split(':')))
+        else:
+            elapsed = xbmc.getInfoLabel('Player.Time')
         title = xbmc.getInfoLabel('Player.Title')
         artist = xbmc.getInfoLabel('MusicPlayer.Artist')
         album = xbmc.getInfoLabel('MusicPlayer.Album')
@@ -149,7 +154,7 @@ class PirateAddon(xbmc.Monitor):
         draw.text((0, 0), artist, font=self.font_sub, fill=(255, 255, 255))
         multiline_text(draw, (0, 30), title, font=self.font_title, fill=(255, 255, 255), max_rows=2)
         draw.text((0, 90), '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(255, 255, 255))
-        if redraw:
+        if not initial:
             self.redraw()
 
 
@@ -158,7 +163,7 @@ class PirateAddon(xbmc.Monitor):
         if method == 'Player.OnPlay':
             icon = xbmc.getInfoLabel('Player.Art(thumb)')
 
-            self.set_playing_info(redraw=False)
+            self.set_playing_info(initial=True)
             self.new_background(icon, 0.2)
             if self.img_info_timer is not None:
                 self.disp.del_user_timer(self.img_info_timer)
