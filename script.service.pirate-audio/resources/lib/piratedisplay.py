@@ -260,6 +260,9 @@ class PirateDisplay:
         # need 120 ms to wake up
         time.sleep(0.120)
         self._command(DISPON)
+        # restore inverse mode; for some reason, sometimes it's not
+        # preserved on wakeup
+        self._command(INVON)
         self.backlight(True)
         self.sleeping = False
 
