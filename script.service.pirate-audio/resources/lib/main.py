@@ -23,6 +23,7 @@ class PirateAddon(xbmc.Monitor):
         self.img_bg = None
         self.img_info = None
         self.img_popup = None
+        self.img_info_timer = None
         self.img_popup_timer = None
         self.disp = piratedisplay.PirateDisplay(button_repeat_hz=5, event=self.button_event)
 
@@ -87,6 +88,9 @@ class PirateAddon(xbmc.Monitor):
 
 
     def hide(self):
+        if self.img_info_timer is not None:
+            self.disp.del_user_timer(self.img_info_timer)
+            self.img_info_timer = None
         self.img_bg = None
         self.img_info = None
         self.redraw()
@@ -107,27 +111,37 @@ class PirateAddon(xbmc.Monitor):
         self.disp.wake()
 
 
+    def set_playing_info(self, timer_id=None, redraw=True):
+        duration = xbmc.getInfoLabel('Player.Duration')
+        elapsed = xbmc.getInfoLabel('Player.Time')
+        title = xbmc.getInfoLabel('Player.Title')
+        artist = xbmc.getInfoLabel('MusicPlayer.Artist')
+        album = xbmc.getInfoLabel('MusicPlayer.Album')
+        try:
+            # Python 2
+            title = title.decode('utf-8', 'ignore')
+            artist = artist.decode('utf-8', 'ignore')
+            album = album.decode('utf-8', 'ignore')
+        except AttributeError:
+            # Python 3
+            pass
+        draw = self.new_overlay()
+        draw.text((0, 0), title, font=self.font_title, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
+        draw.text((0, 30), artist, font=self.font_sub, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
+        draw.text((0, 60), '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
+        if redraw:
+            self.redraw()
+        self.img_info_timer = self.disp.add_user_timer(1, self.set_playing_info)
+
+
     def onNotification(self, sender, method, data):
         super(PirateAddon, self).onNotification(sender, method, data)
         if method == 'Player.OnPlay':
             icon = xbmc.getInfoLabel('Player.Art(thumb)')
-            duration = xbmc.getInfoLabel('Player.Duration')
-            elapsed = xbmc.getInfoLabel('Player.Time')
-            title = xbmc.getInfoLabel('Player.Title')
-            artist = xbmc.getInfoLabel('MusicPlayer.Artist')
-            album = xbmc.getInfoLabel('MusicPlayer.Album')
-            try:
-                # Python 2
-                title = title.decode('utf-8', 'ignore')
-                artist = artist.decode('utf-8', 'ignore')
-                album = album.decode('utf-8', 'ignore')
-            except AttributeError:
-                # Python 3
-                pass
 
-            draw = self.new_overlay()
-            draw.text((0, 0), title, font=self.font_title, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
-            draw.text((0, 30), artist, font=self.font_sub, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
+            if self.img_info_timer is not None:
+                self.disp.del_user_timer(self.img_info_timer)
+            self.set_playing_info(redraw=False)
             self.new_background(icon, 0.2)
         elif method == 'Player.OnStop':
             self.hide()
