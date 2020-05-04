@@ -65,6 +65,7 @@ class PirateDisplay:
         self._user_event = event
         self._user_timers = []
         self._next_user_timer = None
+        self._last_user_timer_id = 0
         self._user_timer_lock = threading.Lock()
         # The RPi.GPIO software debouncing (bouncetime parameter) is not
         # working well. It also doesn't handle key releases that are needed
@@ -144,7 +145,7 @@ class PirateDisplay:
                 self._user_timers = new_timers
                 self._user_timer_lock.release()
                 for t in fire_timers:
-                    t[1](*t[2], **t[3])
+                    t[2](t[1], *t[3], **t[4])
 
             for pin in button_map:
                 self._button_reads[pin] = 0
@@ -175,11 +176,28 @@ class PirateDisplay:
     def add_user_timer(self, secs, event, *args, **kwargs):
         t = time.time() + secs
         self._user_timer_lock.acquire()
-        self._user_timers.append((t, event, args, kwargs))
+        self._last_user_timer_id += 1
+        timer_id = self._last_user_timer_id
+        self._user_timers.append((t, timer_id, event, args, kwargs))
         if self._next_user_timer is None or self._next_user_timer > t:
             self._next_user_timer = t
         self._user_timer_lock.release()
         self._button_interrupt.set()
+        return timer_id
+
+
+    def del_user_timer(self, timer_id):
+        self._user_timer_lock.acquire()
+        new_timers = []
+        new_next = None
+        for t in self._user_timers:
+            if t[1] != timer_id:
+                new_timers.append(t)
+                if new_next is None or t[0] < new_next:
+                    new_next = t[0]
+        self._next_user_timer = new_next
+        self._user_timers = new_timers
+        self._user_timer_lock.release()
 
 
     def clear_user_timers(self):

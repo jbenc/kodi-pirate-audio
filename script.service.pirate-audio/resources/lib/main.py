@@ -76,11 +76,11 @@ class PirateAddon(xbmc.Monitor):
             self.current = img
 
 
-    def show_restore(self):
+    def show_restore(self, timer_id=None):
         self.disp.show(self.current.tobytes())
 
 
-    def hide(self):
+    def hide(self, timer_id=None):
         self.disp.clear_user_timers()
         self.disp.sleep()
         self.current = self.blank
