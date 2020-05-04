@@ -18,7 +18,12 @@ class PirateAddon(xbmc.Monitor):
                                                  30)
         self.font_sub = PIL.ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf',
                                                30)
-        self.current = self.blank = self.new_img()
+        self.blank = PIL.Image.new('RGB', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
+                                   color=(0, 0, 0))
+        self.img_bg = None
+        self.img_info = None
+        self.img_popup = None
+        self.img_popup_timer = None
         self.disp = piratedisplay.PirateDisplay(button_repeat_hz=5, event=self.button_event)
 
 
@@ -33,7 +38,7 @@ class PirateAddon(xbmc.Monitor):
         return res['result']
 
 
-    def new_img(self, path=None, brightness=None, quadrant=None):
+    def new_background(self, path=None, brightness=None, quadrant=None):
         res = PIL.Image.new('RGB', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
                             color=(0, 0, 0))
         if path:
@@ -59,31 +64,47 @@ class PirateAddon(xbmc.Monitor):
             if brightness:
                 enh = PIL.ImageEnhance.Brightness(res)
                 res = enh.enhance(brightness)
-                del enh
-        return res
+        self.img_bg = res
+        self.redraw()
 
 
-    def show(self, img, timeout=None, base=False):
-        self.disp.clear_user_timers()
+    def new_overlay(self, timeout=None):
+        img = PIL.Image.new('RGBA', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
+                            color=(0, 0, 0, 0))
         if timeout:
-            if self.current == self.blank:
-                self.disp.add_user_timer(timeout, self.hide)
-            else:
-                self.disp.add_user_timer(timeout, self.show_restore)
-        self.disp.show(img.tobytes())
+            self.img_popup = img
+            if self.img_popup_timer is not None:
+                self.disp.del_user_timer(self.img_popup_timer)
+            self.img_popup_timer = self.disp.add_user_timer(timeout, self.delete_popup)
+        else:
+            self.img_info = img
+        return PIL.ImageDraw.Draw(img)
+
+
+    def delete_popup(self, timer_id=None):
+        self.img_popup = None
+        self.redraw()
+
+
+    def hide(self):
+        self.img_bg = None
+        self.img_info = None
+        self.redraw()
+
+
+    def redraw(self):
+        if not self.img_bg and not self.img_info and not self.img_popup:
+            self.disp.sleep()
+            return
+        src = self.img_bg or self.blank
+        if self.img_info or self.img_popup:
+            src = src.copy()
+        if self.img_info:
+            src.paste(self.img_info, mask=self.img_info)
+        if self.img_popup:
+            src.paste(self.img_popup, mask=self.img_popup)
+        self.disp.show(src.tobytes())
         self.disp.wake()
-        if base:
-            self.current = img
-
-
-    def show_restore(self, timer_id=None):
-        self.disp.show(self.current.tobytes())
-
-
-    def hide(self, timer_id=None):
-        self.disp.clear_user_timers()
-        self.disp.sleep()
-        self.current = self.blank
 
 
     def onNotification(self, sender, method, data):
@@ -104,12 +125,10 @@ class PirateAddon(xbmc.Monitor):
                 # Python 3
                 pass
 
-            img = self.new_img(icon, 0.2)
-            draw = PIL.ImageDraw.Draw(img)
+            draw = self.new_overlay()
             draw.text((0, 0), title, font=self.font_title, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
             draw.text((0, 30), artist, font=self.font_sub, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
-            self.show(img, base=True)
-            del draw
+            self.new_background(icon, 0.2)
         elif method == 'Player.OnStop':
             self.hide()
 
@@ -131,9 +150,8 @@ class PirateAddon(xbmc.Monitor):
             xbmc.executebuiltin('TakeScreenshot({},sync)'.format(filename))
             while not os.path.exists(filename):
                 time.sleep(0.1)
-            img = self.new_img(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
-            self.disp.show(img.tobytes())
-            del img
+            self.img_info = None
+            self.new_background(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
             return
         if button in ('X', 'Y'):
             if state == 0:
@@ -144,8 +162,7 @@ class PirateAddon(xbmc.Monitor):
             else:
                 volume = max(0, volume - 5)
             xbmc.executebuiltin('SetVolume({})'.format(volume))
-            img = self.current.copy()
-            draw = PIL.ImageDraw.Draw(img)
+            draw = self.new_overlay(timeout=5)
             draw.rectangle((piratedisplay.WIDTH - 10, 0,
                             piratedisplay.WIDTH - 1, piratedisplay.HEIGHT - 1),
                            outline=(255, 255, 255), width=1)
@@ -153,9 +170,7 @@ class PirateAddon(xbmc.Monitor):
             draw.rectangle((piratedisplay.WIDTH - 9, y + 1,
                             piratedisplay.WIDTH - 2, piratedisplay.HEIGHT - 2),
                            fill=(0, 255, 0))
-            self.show(img, timeout=5)
-            del draw
-            del img
+            self.redraw()
 
 
 addon = PirateAddon()
