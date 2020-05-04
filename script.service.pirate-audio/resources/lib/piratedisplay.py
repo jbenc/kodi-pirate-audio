@@ -135,9 +135,14 @@ class PirateDisplay:
                 new_timers = []
                 new_next = None
                 for t in self._user_timers:
+                    include = True
                     if cur_time >= t[0]:
                         fire_timers.append(t)
-                    else:
+                        if t[1]:
+                            t[0] += t[1]
+                        else:
+                            include = False
+                    if include:
                         new_timers.append(t)
                         if new_next is None or t[0] < new_next:
                             new_next = t[0]
@@ -145,7 +150,7 @@ class PirateDisplay:
                 self._user_timers = new_timers
                 self._user_timer_lock.release()
                 for t in fire_timers:
-                    t[2](t[1], *t[3], **t[4])
+                    t[3](t[2], *t[4], **t[5])
 
             for pin in button_map:
                 self._button_reads[pin] = 0
@@ -173,12 +178,12 @@ class PirateDisplay:
         self._user_event = event
 
 
-    def add_user_timer(self, secs, event, *args, **kwargs):
+    def _add_user_timer(self, recurrent, secs, event, args, kwargs):
         t = time.time() + secs
         self._user_timer_lock.acquire()
         self._last_user_timer_id += 1
         timer_id = self._last_user_timer_id
-        self._user_timers.append((t, timer_id, event, args, kwargs))
+        self._user_timers.append([t, secs if recurrent else 0, timer_id, event, args, kwargs])
         if self._next_user_timer is None or self._next_user_timer > t:
             self._next_user_timer = t
         self._user_timer_lock.release()
@@ -186,12 +191,20 @@ class PirateDisplay:
         return timer_id
 
 
+    def add_user_timer(self, secs, event, *args, **kwargs):
+        return self._add_user_timer(False, secs, event, args, kwargs)
+
+
+    def add_recurrent_user_timer(self, secs, event, *args, **kwargs):
+        return self._add_user_timer(True, secs, event, args, kwargs)
+
+
     def del_user_timer(self, timer_id):
         self._user_timer_lock.acquire()
         new_timers = []
         new_next = None
         for t in self._user_timers:
-            if t[1] != timer_id:
+            if t[2] != timer_id:
                 new_timers.append(t)
                 if new_next is None or t[0] < new_next:
                     new_next = t[0]

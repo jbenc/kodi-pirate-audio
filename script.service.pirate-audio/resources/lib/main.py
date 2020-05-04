@@ -131,7 +131,6 @@ class PirateAddon(xbmc.Monitor):
         draw.text((0, 60), '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(255, 255, 255), stroke_fill=(0, 0, 0))
         if redraw:
             self.redraw()
-        self.img_info_timer = self.disp.add_user_timer(1, self.set_playing_info)
 
 
     def onNotification(self, sender, method, data):
@@ -139,10 +138,11 @@ class PirateAddon(xbmc.Monitor):
         if method == 'Player.OnPlay':
             icon = xbmc.getInfoLabel('Player.Art(thumb)')
 
-            if self.img_info_timer is not None:
-                self.disp.del_user_timer(self.img_info_timer)
             self.set_playing_info(redraw=False)
             self.new_background(icon, 0.2)
+            if self.img_info_timer is not None:
+                self.disp.del_user_timer(self.img_info_timer)
+            self.img_info_timer = self.disp.add_recurrent_user_timer(1, self.set_playing_info)
         elif method == 'Player.OnStop':
             self.hide()
 
