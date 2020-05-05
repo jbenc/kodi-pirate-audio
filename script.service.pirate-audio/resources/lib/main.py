@@ -27,6 +27,11 @@ def multiline_text(draw, xy, text, font, fill, spacing=4, max_rows=None):
         row += 1
 
 
+def center_text(draw, y, text, font, fill):
+    width = draw.textsize(text, font=font)[0]
+    draw.text(((piratedisplay.WIDTH - width) // 2, y), text, font=font, fill=fill)
+
+
 class RpcError(Exception):
     pass
 
@@ -132,6 +137,16 @@ class PirateAddon(xbmc.Monitor):
 
 
     def set_playing_info(self, timer_id=None, initial=False):
+
+        def to_secs(s):
+            res = 0
+            try:
+                for t in s.split(':'):
+                    res = res * 60 + int(t)
+            except ValueError:
+                return 0
+            return res
+
         duration = xbmc.getInfoLabel('Player.Duration')
         if initial:
             # when changing songs, Kodi returns old data for duration,
@@ -150,10 +165,23 @@ class PirateAddon(xbmc.Monitor):
         except AttributeError:
             # Python 3
             pass
+
+        # there's 'Player.Progress' infolabel but it always returns an empty
+        # string, calculate the progress manually. While doing so, normalize
+        # to pixels instead of per cent:
+        progress = 0
+        duration_secs = to_secs(duration)
+        if duration_secs:
+            progress = to_secs(elapsed) * piratedisplay.WIDTH // duration_secs
+
         draw = self.new_overlay()
         draw.text((0, 0), artist, font=self.font_sub, fill=(255, 255, 255))
         multiline_text(draw, (0, 30), title, font=self.font_title, fill=(255, 255, 255), max_rows=2)
-        draw.text((0, 90), '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(255, 255, 255))
+        draw.rectangle((0, piratedisplay.HEIGHT - 28, progress - 1, piratedisplay.HEIGHT - 1),
+                       fill=(0, 0, 0xb0))
+        center_text(draw, piratedisplay.HEIGHT - 32,
+                    '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(0xb0, 0xb0, 0xb0))
+
         if not initial:
             self.redraw()
 
