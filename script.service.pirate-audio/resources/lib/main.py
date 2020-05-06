@@ -46,6 +46,7 @@ class PirateAddon(xbmc.Monitor):
         self.blank = PIL.Image.new('RGB', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
                                    color=(0, 0, 0))
         self.img_bg = None
+        self.img_bg_cache = None
         self.img_info = None
         self.img_popup = None
         self.img_info_timer = None
@@ -65,6 +66,12 @@ class PirateAddon(xbmc.Monitor):
 
 
     def new_background(self, path=None, brightness=None, quadrant=None):
+        if path and not quadrant and self.img_bg_cache and self.img_bg_cache[:2] == (path, brightness):
+            # the image is unchanged, use the cached version
+            self.img_bg = self.img_bg_cache[2]
+            self.redraw()
+            return
+
         res = PIL.Image.new('RGB', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
                             color=(0, 0, 0))
         if path:
@@ -91,6 +98,7 @@ class PirateAddon(xbmc.Monitor):
                 enh = PIL.ImageEnhance.Brightness(res)
                 res = enh.enhance(brightness)
         self.img_bg = res
+        self.img_bg_cache = (path, brightness, res)
         self.redraw()
 
 
