@@ -189,10 +189,26 @@ class PirateAddon(xbmc.Monitor):
     def onNotification(self, sender, method, data):
         super(PirateAddon, self).onNotification(sender, method, data)
         if method == 'Player.OnPlay':
+            cache = None
             icon = xbmc.getInfoLabel('Player.Art(thumb)')
+            if icon:
+                cache = self.json_call('Textures.GetTextures',
+                                       properties=['cachedurl'],
+                                       filter={'field': 'url', 'operator': 'is',
+                                               'value': icon})['textures']
+                if cache:
+                    cache = xbmc.translatePath('special://thumbnails/' + cache[0]['cachedurl'])
+                elif icon.startswith('/'):
+                    # if the icon is not cached, we can use it directly if
+                    # it's on a local filesystem
+                    cache = icon
+                else:
+                    # for all other cases, we go with no icon (assign None
+                    # instead of the [])
+                    cache = None
 
             self.set_playing_info(initial=True)
-            self.new_background(icon, 0.2)
+            self.new_background(cache, 0.2)
             if self.img_info_timer is not None:
                 self.disp.del_user_timer(self.img_info_timer)
             self.img_info_timer = self.disp.add_recurrent_user_timer(1, self.set_playing_info)
