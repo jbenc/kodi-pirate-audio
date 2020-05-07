@@ -26,7 +26,10 @@ def multiline_text(draw, xy, text, font, fill, spacing=0, max_rows=None):
         row += 1
 
 
-def center_text(draw, y, text, font, fill):
+def center_text(draw, y, text, font, fill=(255, 255, 255)):
+    if y is None:
+        # center to the whole screen
+        y = (piratedisplay.height - sum(font.getmetrics())) // 2
     width = draw.textsize(text, font=font)[0]
     draw.text(((piratedisplay.width - width) // 2, y), text, font=font, fill=fill)
 
@@ -57,6 +60,8 @@ class PirateAddon(xbmc.Monitor):
                                                30)
         self.font_sym = PIL.ImageFont.truetype('/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf',
                                                32)
+        self.font_symxl = PIL.ImageFont.truetype('/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf',
+                                                 100)
         self.font_title_height = sum(self.font_title.getmetrics())
         self.font_sub_height = sum(self.font_sub.getmetrics())
 
@@ -151,7 +156,7 @@ class PirateAddon(xbmc.Monitor):
 
 
     def set_help(self, topleft, topright, bottomleft, bottomright):
-        draw = self.new_overlay(timeout=10)
+        draw = self.new_overlay(timeout=8)
         boxed_text(draw, 0, 71, False, topleft, self.font_sym)
         boxed_text(draw, 0, piratedisplay.height - 52, False, bottomleft, self.font_sym)
         boxed_text(draw, piratedisplay.width - 1, 71, True, topright, self.font_sym)
@@ -266,8 +271,8 @@ class PirateAddon(xbmc.Monitor):
                     # instead of the [])
                     cache = None
 
-            self.new_background(cache, 0.2)
             self.remove_overlay_info()
+            self.new_background(cache, 0.2)
             self.set_playing_info(initial=True)
             self.set_help(u'\u23ef', u'\U0001f50a', u'\u23ed', u'\U0001f509')
             self.redraw()
@@ -276,10 +281,14 @@ class PirateAddon(xbmc.Monitor):
             self.hide()
 
 
-    def screenshot(self, button='A'):
+    def screenshot(self, button='A', clear=True):
         self.remove_overlay_info()
-        self.new_background()
+        if clear:
+            self.new_background()
+        draw = self.new_overlay()
+        center_text(draw, None, u'\u23f3', font=self.font_symxl)
         self.redraw()
+
         filename = '/tmp/screenshot.png'
         try:
             os.unlink(filename)
@@ -288,6 +297,7 @@ class PirateAddon(xbmc.Monitor):
         xbmc.executebuiltin('TakeScreenshot({},sync)'.format(filename))
         while not os.path.exists(filename):
             time.sleep(0.1)
+        self.remove_overlay_info()
         self.new_background(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
         self.redraw()
 
@@ -353,7 +363,7 @@ class PirateAddon(xbmc.Monitor):
     def button_event_screen(self, button, state):
         if state != 1:
             return
-        self.screenshot(button)
+        self.screenshot(button, clear=False)
 
 
 addon = PirateAddon()
