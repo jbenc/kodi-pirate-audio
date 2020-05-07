@@ -213,6 +213,31 @@ class PirateDisplay:
         self._user_timer_lock.release()
 
 
+    def reset_user_timer(self, timer_id, secs, event, *args, **kwargs):
+        if timer_id is not None:
+            updated = False
+            wake = False
+            new_t = time.time() + secs
+            self._user_timer_lock.acquire()
+            for t in self._user_timers:
+                if t[2] == timer_id:
+                    t[0] = new_t
+                    t[3] = event
+                    t[4] = args
+                    t[5] = kwargs
+                    updated = True
+                    break
+            if updated and self._next_user_timer > new_t:
+                self._next_user_timer = new_t
+                wake = True
+            self._user_timer_lock.release()
+            if wake:
+                self._button_interrupt.set()
+            if updated:
+                return timer_id
+        return self._add_user_timer(False, secs, event, args, kwargs)
+
+
     def clear_user_timers(self):
         self._user_timers = []
         self._next_user_timer = None
