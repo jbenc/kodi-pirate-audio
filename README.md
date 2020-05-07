@@ -13,22 +13,25 @@ want to control all home players by a single app.
 ## Requisites
 
 ```
-apt-get install python-rpi.gpio python-spidev python-pil
+apt-get install python-rpi.gpio python-spidev python-pil fonts-symbola
 ```
 
 ## Debugging
 
-To see what is Kodi displaying, create `/tmp/piratekodiview` file to switch
-on a debug mode. Pressing one of the buttons then shows a corresponding part
-of Kodi screen (button A shows the top left part, etc). Note what you see is
-a screenshot, not a live view. To refresh the screen, press the button
-again. A long press of any of the buttons will switch off the screen.
+To see what Kodi is displaying, long press (more than 1 sec) the B button.
+A portion of current Kodi screen will be shown. To show different part of
+the screen, press A or X button. The A button cycles between top left and
+bottom left part, the X button cycles between top right and bottom right.
+Note that what you see is a screenshot, not a live view. To refresh the
+screen, press the Y button.
 
-If you don't have a keyboard connected, use the remote control in web view
-or in Kore.
+Repeatedly pressing the B button switches among sets of keys. By pressing
+a button, the corresponding key is sent to Kodi (see the onscreen icons).
 
-Note that when Kodi is in a screen saver mode, the screenshot may show
-garbage. Press any button on the remote to dismiss the screen saver.
+Long pressing the B button again returns to the player view.
+
+Note that when Kodi is in a screen saver mode, screenshots may show garbage.
+Send any key to Kodi to dismiss the screen saver.
 
 ## Development
 
@@ -48,6 +51,6 @@ CPU consumption | ~ 50%      | ~ 15%
 initialization  | 2.5 sec    | 1.5 sec
 
 In addition, the **piratedisplay** module handles the buttons including
-optional software repeat.
+optional software repeat and user timers.
 
-The module is usable on its own in other projects.
+The module is designed to be usable on its own in other projects.
