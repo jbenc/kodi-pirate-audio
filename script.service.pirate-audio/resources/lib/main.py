@@ -95,6 +95,8 @@ class PirateAddon(xbmc.Monitor):
 
         self.playing = False
         self.paused = False
+        self.pause_timer = None
+        self.pause_timeout = 60
 
         self.disp = piratedisplay.PirateDisplay(button_repeat_hz=5, event=self.button_event)
 
@@ -185,7 +187,7 @@ class PirateAddon(xbmc.Monitor):
         self.redraw()
 
 
-    def hide(self):
+    def hide(self, timer_id=None):
         self.remove_overlay_info()
         self.img_bg = None
         self.redraw()
@@ -263,8 +265,23 @@ class PirateAddon(xbmc.Monitor):
 
     def notification_play(self, method=None):
         # method will be None in the case of a fake event after mode switch
-        if method is not None and method != 'Player.OnPlay' and method != 'Player.OnStop':
+
+        if method == 'Player.OnResume':
+            if self.pause_timer is not None:
+                self.disp.del_user_timer(self.pause_timer)
+                self.pause_timer = None
+            if self.img_info_timer is not None:
+                # pause was short enough and the screen was not hidden yet,
+                # no need to do anything here
+                return
+        elif method == 'Player.OnPause' or (method is None and self.paused):
+            # set timer to hide the screen after a minute, we don't want to
+            # be burning it indefinitely
+            self.pause_timer = self.disp.add_user_timer(self.pause_timeout, self.hide)
             return
+        elif method is not None and method != 'Player.OnPlay' and method != 'Player.OnStop':
+            return
+
         if self.playing:
             cache = None
             icon = xbmc.getInfoLabel('Player.Art(thumb)')
@@ -312,6 +329,9 @@ class PirateAddon(xbmc.Monitor):
         self.remove_overlay_info()
         self.new_background(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
         self.redraw()
+        # set timer to hide the screen after a minute, we don't want to
+        # be burning it indefinitely
+        self.pause_timer = self.disp.add_user_timer(self.pause_timeout, self.hide)
 
 
     def next_action(self):
@@ -319,6 +339,9 @@ class PirateAddon(xbmc.Monitor):
         if self.cur_action >= len(self.actions):
             self.cur_action = 0
         action = self.actions[self.cur_action]
+        if self.pause_timer is not None:
+            self.disp.del_user_timer(self.pause_timer)
+            self.pause_timer = None
         self.set_help(*action['help'])
         if 'init' in action:
             action['init']()
