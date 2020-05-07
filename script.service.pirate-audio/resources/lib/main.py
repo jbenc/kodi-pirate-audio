@@ -135,16 +135,22 @@ class PirateAddon(xbmc.Monitor):
         self.img_bg_cache = (path, brightness, res)
 
 
-    def new_overlay(self, timeout=None):
+    def new_overlay_info(self, preserve_timer=False):
+        if not preserve_timer:
+            self.remove_overlay_info()
         img = PIL.Image.new('RGBA', (piratedisplay.width, piratedisplay.height),
                             color=(0, 0, 0, 0))
-        if timeout:
-            self.img_popup = img
-            if self.img_popup_timer is not None:
-                self.disp.del_user_timer(self.img_popup_timer)
-            self.img_popup_timer = self.disp.add_user_timer(timeout, self.delete_popup)
-        else:
-            self.img_info = img
+        self.img_info = img
+        return PIL.ImageDraw.Draw(img)
+
+
+    def new_overlay_popup(self, timeout):
+        if self.img_popup_timer is not None:
+            self.disp.del_user_timer(self.img_popup_timer)
+        img = PIL.Image.new('RGBA', (piratedisplay.width, piratedisplay.height),
+                            color=(0, 0, 0, 0))
+        self.img_popup = img
+        self.img_popup_timer = self.disp.add_user_timer(timeout, self.delete_popup)
         return PIL.ImageDraw.Draw(img)
 
 
@@ -156,7 +162,7 @@ class PirateAddon(xbmc.Monitor):
 
 
     def set_help(self, topleft, topright, bottomleft, bottomright):
-        draw = self.new_overlay(timeout=8)
+        draw = self.new_overlay_popup(timeout=8)
         boxed_text(draw, 0, 71, False, topleft, self.font_sym)
         boxed_text(draw, 0, piratedisplay.height - 52, False, bottomleft, self.font_sym)
         boxed_text(draw, piratedisplay.width - 1, 71, True, topright, self.font_sym)
@@ -227,7 +233,7 @@ class PirateAddon(xbmc.Monitor):
         if duration_secs:
             progress = to_secs(elapsed) * piratedisplay.width // duration_secs
 
-        draw = self.new_overlay()
+        draw = self.new_overlay_info(preserve_timer=True)
         draw.text((0, 0), artist, font=self.font_sub, fill=(255, 255, 255))
         multiline_text(draw, (0, self.font_title_height), title,
                        font=self.font_title, fill=(255, 255, 255), max_rows=2)
@@ -282,10 +288,9 @@ class PirateAddon(xbmc.Monitor):
 
 
     def screenshot(self, button='A', clear=True):
-        self.remove_overlay_info()
         if clear:
             self.new_background()
-        draw = self.new_overlay()
+        draw = self.new_overlay_info()
         center_text(draw, None, u'\u23f3', font=self.font_symxl)
         self.redraw()
 
@@ -342,7 +347,7 @@ class PirateAddon(xbmc.Monitor):
             else:
                 volume = max(0, volume - 5)
             xbmc.executebuiltin('SetVolume({})'.format(volume))
-            draw = self.new_overlay(timeout=5)
+            draw = self.new_overlay_popup(timeout=5)
             draw.rectangle((piratedisplay.width - 10, 0,
                             piratedisplay.width - 1, piratedisplay.height - 1),
                            outline=(255, 255, 255), width=1)
