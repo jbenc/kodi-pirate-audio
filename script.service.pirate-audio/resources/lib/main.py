@@ -7,11 +7,10 @@ import PIL, PIL.Image, PIL.ImageDraw, PIL.ImageFont, PIL.ImageEnhance
 import json, os, time
 
 
-def multiline_text(draw, xy, text, font, fill, spacing=4, max_rows=None):
+def multiline_text(draw, xy, text, font, fill, spacing=0, max_rows=None):
     row = 0
     x, y = xy
-    height = font.getmetrics()
-    height = height[0] - height[1] + spacing
+    height = sum(font.getmetrics()) + spacing
     words = text.split()
     words.reverse()
     while words and (max_rows is None or row < max_rows):
@@ -43,6 +42,9 @@ class PirateAddon(xbmc.Monitor):
                                                  30)
         self.font_sub = PIL.ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf',
                                                30)
+        self.font_title_height = sum(self.font_title.getmetrics())
+        self.font_sub_height = sum(self.font_sub.getmetrics())
+
         self.blank = PIL.Image.new('RGB', (piratedisplay.width, piratedisplay.height),
                                    color=(0, 0, 0))
         self.img_bg = None
@@ -184,10 +186,12 @@ class PirateAddon(xbmc.Monitor):
 
         draw = self.new_overlay()
         draw.text((0, 0), artist, font=self.font_sub, fill=(255, 255, 255))
-        multiline_text(draw, (0, 30), title, font=self.font_title, fill=(255, 255, 255), max_rows=2)
-        draw.rectangle((0, piratedisplay.height - 28, progress - 1, piratedisplay.height - 1),
+        multiline_text(draw, (0, self.font_title_height), title,
+                       font=self.font_title, fill=(255, 255, 255), max_rows=2)
+        draw.rectangle((0, piratedisplay.height - self.font_sub_height,
+                        progress - 1, piratedisplay.height - 1),
                        fill=(0, 0, 0xb0))
-        center_text(draw, piratedisplay.height - 32,
+        center_text(draw, piratedisplay.height - self.font_sub_height,
                     '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(0xb0, 0xb0, 0xb0))
 
         if not initial:
