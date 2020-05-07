@@ -34,16 +34,23 @@ def center_text(draw, y, text, font, fill=(255, 255, 255)):
     draw.text(((piratedisplay.width - width) // 2, y), text, font=font, fill=fill)
 
 
-def boxed_text(draw, x, y, right_align, text, font, fill=(0xff, 0xee, 0x00), padding=(10, 2)):
+def boxed_text(draw, x, y, halign, text, font, fill=(0xff, 0xff, 0xff), padding=(10, 2)):
+    """halign specified horizontal alignment and is 'left', 'right' or
+    'center'. Vertical alignment is always center. x and y can be None, in
+    which case they refer to the center of the screen."""
     bgfill = (0, 0, 0, 196)
     height = sum(font.getmetrics()) + 2 * padding[1]
     width = draw.textsize(text, font=font)[0] + 2 * padding[0]
+    if x is None:
+        x = piratedisplay.width // 2
+    if y is None:
+        y = piratedisplay.height // 2
     y -= height // 2
-    if right_align:
+    if halign == 'right':
         x -= width
-    x2 = x + width
-    y2 = y + height
-    draw.rectangle((x, y, x2 - 1, y2 - 1), fill=bgfill)
+    elif halign == 'center':
+        x -= width // 2
+    draw.rectangle((x, y, x + width - 1, y + height - 1), fill=bgfill)
     draw.text((x + padding[0], y + padding[1]), text, font=font, fill=fill)
 
 
@@ -165,11 +172,12 @@ class PirateAddon(xbmc.Monitor):
 
 
     def set_help(self, topleft, topright, bottomleft, bottomright):
+        fill = (0xff, 0xee, 0x00)
         draw = self.new_overlay_popup(timeout=8)
-        boxed_text(draw, 0, 71, False, topleft, self.font_sym)
-        boxed_text(draw, 0, piratedisplay.height - 52, False, bottomleft, self.font_sym)
-        boxed_text(draw, piratedisplay.width - 1, 71, True, topright, self.font_sym)
-        boxed_text(draw, piratedisplay.width - 1, piratedisplay.height - 52, True, bottomright, self.font_sym)
+        boxed_text(draw, 0, 71, 'left', topleft, self.font_sym, fill)
+        boxed_text(draw, 0, piratedisplay.height - 52, 'left', bottomleft, self.font_sym, fill)
+        boxed_text(draw, piratedisplay.width - 1, 71, 'right', topright, self.font_sym, fill)
+        boxed_text(draw, piratedisplay.width - 1, piratedisplay.height - 52, 'right', bottomright, self.font_sym, fill)
 
 
     def delete_popup(self, timer_id=None):
@@ -247,7 +255,7 @@ class PirateAddon(xbmc.Monitor):
                     '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(0xb0, 0xb0, 0xb0))
 
         if self.paused:
-            center_text(draw, None, u'\u23f8', font=self.font_symxl)
+            boxed_text(draw, None, None, 'center', u'\u23f8', self.font_symxl)
 
         if not initial:
             self.redraw()
@@ -290,7 +298,7 @@ class PirateAddon(xbmc.Monitor):
         if clear:
             self.new_background()
         draw = self.new_overlay_info()
-        center_text(draw, None, u'\u23f3', font=self.font_symxl)
+        boxed_text(draw, None, None, 'center', u'\u23f3', self.font_symxl)
         self.redraw()
 
         filename = '/tmp/screenshot.png'
