@@ -68,6 +68,19 @@ class PirateAddon(xbmc.Monitor):
         self.img_popup = None
         self.img_info_timer = None
         self.img_popup_timer = None
+
+        self.actions = (
+            { 'help': (u'\u23ef', u'\U0001f50a', u'\u23ed', u'\U0001f509'),
+              'init': self.notification_play,
+              'notification': self.notification_play,
+              'button': self.button_event_play },
+            { 'help': (u'\u2b09', u'\u2b08', u'\u2b0b', u'\u2b0a'),
+              'init': self.screenshot,
+              'button': self.button_event_screen },
+        )
+        self.cur_action = 0
+        self.action_switcher = 0
+
         self.disp = piratedisplay.PirateDisplay(button_repeat_hz=5, event=self.button_event)
 
 
@@ -130,6 +143,13 @@ class PirateAddon(xbmc.Monitor):
         return PIL.ImageDraw.Draw(img)
 
 
+    def remove_overlay_info(self):
+        if self.img_info_timer is not None:
+            self.disp.del_user_timer(self.img_info_timer)
+            self.img_info_timer = None
+        self.img_info = None
+
+
     def set_help(self, topleft, topright, bottomleft, bottomright):
         draw = self.new_overlay(timeout=10)
         boxed_text(draw, 0, 71, False, topleft, self.font_sym)
@@ -144,11 +164,8 @@ class PirateAddon(xbmc.Monitor):
 
 
     def hide(self):
-        if self.img_info_timer is not None:
-            self.disp.del_user_timer(self.img_info_timer)
-            self.img_info_timer = None
+        self.remove_overlay_info()
         self.img_bg = None
-        self.img_info = None
         self.redraw()
 
 
@@ -219,9 +236,18 @@ class PirateAddon(xbmc.Monitor):
             self.redraw()
 
 
-    def onNotification(self, sender, method, data):
-        super(PirateAddon, self).onNotification(sender, method, data)
-        if method == 'Player.OnPlay':
+    def notification_play(self, method=None):
+        if method is None:
+            # autodetect
+            playing = bool(xbmc.getInfoLabel('Player.Duration'))
+        else:
+            if method == 'Player.OnPlay':
+                playing = True
+            elif method == 'Player.OnStop':
+                playing = False
+            else:
+                return
+        if playing:
             cache = None
             icon = xbmc.getInfoLabel('Player.Art(thumb)')
             if icon:
@@ -241,37 +267,62 @@ class PirateAddon(xbmc.Monitor):
                     cache = None
 
             self.new_background(cache, 0.2)
+            self.remove_overlay_info()
             self.set_playing_info(initial=True)
             self.set_help(u'\u23ef', u'\U0001f50a', u'\u23ed', u'\U0001f509')
             self.redraw()
-            if self.img_info_timer is not None:
-                self.disp.del_user_timer(self.img_info_timer)
             self.img_info_timer = self.disp.add_recurrent_user_timer(1, self.set_playing_info)
-        elif method == 'Player.OnStop':
+        else:
             self.hide()
 
 
+    def screenshot(self, button='A'):
+        self.remove_overlay_info()
+        self.new_background()
+        self.redraw()
+        filename = '/tmp/screenshot.png'
+        try:
+            os.unlink(filename)
+        except OSError:
+            pass
+        xbmc.executebuiltin('TakeScreenshot({},sync)'.format(filename))
+        while not os.path.exists(filename):
+            time.sleep(0.1)
+        self.new_background(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
+        self.redraw()
+
+
+    def next_action(self):
+        self.cur_action += 1
+        if self.cur_action >= len(self.actions):
+            self.cur_action = 0
+        action = self.actions[self.cur_action]
+        self.set_help(*action['help'])
+        if 'init' in action:
+            action['init']()
+
+
+    def onNotification(self, sender, method, data):
+        super(PirateAddon, self).onNotification(sender, method, data)
+        action = self.actions[self.cur_action]
+        if 'notification' in action:
+            action['notification'](method)
+
+
     def button_event(self, button, state):
-        if os.path.exists('/tmp/piratekodiview'):
-            if state == 0:
-                return
+        # long pressing (> 1 sec) B button always switches actions
+        if button == 'B':
             if state == 2:
-                self.disp.sleep()
+                if self.action_switcher == 3:
+                    self.next_action()
+                self.action_switcher += 1
                 return
-            self.disp.show(self.blank.tobytes())
-            self.disp.wake()
-            filename = '/tmp/screenshot.png'
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
-            xbmc.executebuiltin('TakeScreenshot({},sync)'.format(filename))
-            while not os.path.exists(filename):
-                time.sleep(0.1)
-            self.img_info = None
-            self.new_background(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
-            self.redraw()
-            return
+            if state == 0:
+                self.action_switcher = 0
+        self.actions[self.cur_action]['button'](button, state)
+
+
+    def button_event_play(self, button, state):
         if button in ('X', 'Y'):
             if state == 0:
                 return
@@ -290,6 +341,19 @@ class PirateAddon(xbmc.Monitor):
                             piratedisplay.width - 2, piratedisplay.height - 2),
                            fill=(0, 255, 0))
             self.redraw()
+            return
+        if state != 1:
+            return
+        if button == 'A':
+            xbmc.executebuiltin('PlayerControl(Play)')
+        elif button == 'B':
+            xbmc.executebuiltin('PlayerControl(Next)')
+
+
+    def button_event_screen(self, button, state):
+        if state != 1:
+            return
+        self.screenshot(button)
 
 
 addon = PirateAddon()
