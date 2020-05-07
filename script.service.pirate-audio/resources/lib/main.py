@@ -91,9 +91,24 @@ class PirateAddon(xbmc.Monitor):
               'init': self.notification_play,
               'notification': self.notification_play,
               'button': self.button_event_play },
-            { 'help': (u'\u2b09', u'\u2b08', u'\u2b0b', u'\u2b0a'),
+            { 'help': (u'[\u21f5', u'\u21f5]', u'\u22ef', u'\U0001f501'),
               'init': self.screenshot,
-              'button': self.button_event_screen },
+              'button': self.button_event_screen_move },
+            { 'help': (u'\u21b5', u'\u2191', u'\u22ef', u'\u2193'),
+              'init': self.redraw,
+              'button': self.button_event_screen_keys,
+              'butt_data': { 'A': 'Select', 'X': 'Up', 'Y': 'Down' } },
+            { 'help': (u'\u2190', u'\u2192', u'\u22ef', u'\u21b5'),
+              'init': self.redraw,
+              'button': self.button_event_screen_keys,
+              'butt_data': { 'A': 'Left', 'X': 'Right', 'Y': 'Select' } },
+            { 'help': (u'\u232b', u'\u2630', u'\u22ef', u'\u2139'),
+              'init': self.redraw,
+              'button': self.button_event_screen_keys,
+              'butt_data': { 'A': 'Back', 'X': 'ContextMenu', 'Y': 'Info' } },
+            { 'help': (u'[\u21f5', u'\u21f5]', u'\u22ef', u'\U0001f501'),
+              'init': self.redraw,
+              'button': self.button_event_screen_move },
         )
         self.cur_action = 0
         self.action_switcher = 0
@@ -319,9 +334,10 @@ class PirateAddon(xbmc.Monitor):
             self.hide()
 
 
-    def screenshot(self, button='A', clear=True):
+    def screenshot(self, clear=True):
         if clear:
             self.new_background()
+            self.scr_pos = [0, 0]
         draw = self.new_overlay_info()
         boxed_text(draw, None, None, 'center', u'\u23f3', self.font_symxl)
         self.redraw()
@@ -335,17 +351,17 @@ class PirateAddon(xbmc.Monitor):
         while not os.path.exists(filename):
             time.sleep(0.1)
         self.remove_overlay_info()
-        self.new_background(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
+        self.new_background(filename, quadrant=self.scr_pos)
         self.redraw()
         # set timer to hide the screen after a minute, we don't want to
         # be burning it indefinitely
         self.pause_timer = self.disp.reset_user_timer(self.pause_timer, self.pause_timeout, self.hide)
 
 
-    def next_action(self):
+    def next_action(self, first=0):
         self.cur_action += 1
         if self.cur_action >= len(self.actions):
-            self.cur_action = 0
+            self.cur_action = first
         action = self.actions[self.cur_action]
         if self.pause_timer is not None:
             self.disp.del_user_timer(self.pause_timer)
@@ -382,7 +398,11 @@ class PirateAddon(xbmc.Monitor):
                 return
             if state == 0:
                 self.action_switcher = 0
-        self.actions[self.cur_action]['button'](button, state)
+        action = self.actions[self.cur_action]
+        if 'butt_data' in action:
+            action['button'](button, state, action['butt_data'])
+        else:
+            action['button'](button, state)
 
 
     def button_event_play(self, button, state):
@@ -413,10 +433,33 @@ class PirateAddon(xbmc.Monitor):
             xbmc.executebuiltin('PlayerControl(Next)')
 
 
-    def button_event_screen(self, button, state):
+    def button_event_screen_move(self, button, state):
         if state != 1:
             return
-        self.screenshot(button, clear=False)
+        if button == 'B':
+            self.next_action(first=2)
+        elif button == 'A' or button == 'X':
+            if self.scr_pos[0] == (0 if button == 'A' else 1):
+                self.scr_pos[1] = 1 - self.scr_pos[1]
+            else:
+                self.scr_pos[0] = 1 - self.scr_pos[0]
+            self.screenshot(clear=False)
+        elif button == 'Y':
+            self.screenshot(clear=False)
+
+
+    def button_event_screen_keys(self, button, state, data):
+        if state != 1:
+            return
+        if button == 'B':
+            self.next_action(first=2)
+        else:
+            self.json_call('Input.' + data[button])
+            # Need to wait a bit for the skin to have a chance to update the
+            # screen before taking screenshot. Note it's still not enough
+            # for some screens and manual reload is needed.
+            time.sleep(0.2)
+            self.screenshot(clear=False)
 
 
 addon = PirateAddon()
