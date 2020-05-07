@@ -358,9 +358,11 @@ class PirateAddon(xbmc.Monitor):
         self.pause_timer = self.disp.reset_user_timer(self.pause_timer, self.pause_timeout, self.hide)
 
 
-    def next_action(self, first=0):
+    def next_action(self, first=0, last=None):
+        if last is None:
+            last = len(self.actions) - 1
         self.cur_action += 1
-        if self.cur_action >= len(self.actions):
+        if self.cur_action > last:
             self.cur_action = first
         action = self.actions[self.cur_action]
         if self.pause_timer is not None:
@@ -393,7 +395,7 @@ class PirateAddon(xbmc.Monitor):
         if button == 'B':
             if state == 2:
                 if self.action_switcher == 3:
-                    self.next_action()
+                    self.next_action(last=1)
                 self.action_switcher += 1
                 return
             if state == 0:
