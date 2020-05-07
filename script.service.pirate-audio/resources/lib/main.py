@@ -19,7 +19,7 @@ def multiline_text(draw, xy, text, font, fill, spacing=4, max_rows=None):
         while words:
             line.append(words.pop())
             width = draw.textsize(' '.join(line), font=font)[0]
-            if width > piratedisplay.WIDTH and len(line) > 1:
+            if width > piratedisplay.width and len(line) > 1:
                 words.append(line.pop())
                 break
         draw.text((x, y), ' '.join(line), font=font, fill=fill)
@@ -29,7 +29,7 @@ def multiline_text(draw, xy, text, font, fill, spacing=4, max_rows=None):
 
 def center_text(draw, y, text, font, fill):
     width = draw.textsize(text, font=font)[0]
-    draw.text(((piratedisplay.WIDTH - width) // 2, y), text, font=font, fill=fill)
+    draw.text(((piratedisplay.width - width) // 2, y), text, font=font, fill=fill)
 
 
 class RpcError(Exception):
@@ -43,7 +43,7 @@ class PirateAddon(xbmc.Monitor):
                                                  30)
         self.font_sub = PIL.ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf',
                                                30)
-        self.blank = PIL.Image.new('RGB', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
+        self.blank = PIL.Image.new('RGB', (piratedisplay.width, piratedisplay.height),
                                    color=(0, 0, 0))
         self.img_bg = None
         self.img_bg_cache = None
@@ -72,13 +72,13 @@ class PirateAddon(xbmc.Monitor):
             self.redraw()
             return
 
-        res = PIL.Image.new('RGB', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
+        res = PIL.Image.new('RGB', (piratedisplay.width, piratedisplay.height),
                             color=(0, 0, 0))
         if path:
             try:
                 img = PIL.Image.open(path)
-                width = piratedisplay.WIDTH
-                height = piratedisplay.HEIGHT
+                width = piratedisplay.width
+                height = piratedisplay.height
                 if quadrant:
                     width *= 2
                     height *= 2
@@ -88,8 +88,8 @@ class PirateAddon(xbmc.Monitor):
                     x = (width - img.width) // 2
                     y = (height - img.height) // 2
                 else:
-                    x = quadrant[0] * -piratedisplay.WIDTH
-                    y = quadrant[1] * -piratedisplay.HEIGHT
+                    x = quadrant[0] * -piratedisplay.width
+                    y = quadrant[1] * -piratedisplay.height
                 res.paste(img, box=(x, y))
                 del img
             except IOError:
@@ -103,7 +103,7 @@ class PirateAddon(xbmc.Monitor):
 
 
     def new_overlay(self, timeout=None):
-        img = PIL.Image.new('RGBA', (piratedisplay.WIDTH, piratedisplay.HEIGHT),
+        img = PIL.Image.new('RGBA', (piratedisplay.width, piratedisplay.height),
                             color=(0, 0, 0, 0))
         if timeout:
             self.img_popup = img
@@ -180,14 +180,14 @@ class PirateAddon(xbmc.Monitor):
         progress = 0
         duration_secs = to_secs(duration)
         if duration_secs:
-            progress = to_secs(elapsed) * piratedisplay.WIDTH // duration_secs
+            progress = to_secs(elapsed) * piratedisplay.width // duration_secs
 
         draw = self.new_overlay()
         draw.text((0, 0), artist, font=self.font_sub, fill=(255, 255, 255))
         multiline_text(draw, (0, 30), title, font=self.font_title, fill=(255, 255, 255), max_rows=2)
-        draw.rectangle((0, piratedisplay.HEIGHT - 28, progress - 1, piratedisplay.HEIGHT - 1),
+        draw.rectangle((0, piratedisplay.height - 28, progress - 1, piratedisplay.height - 1),
                        fill=(0, 0, 0xb0))
-        center_text(draw, piratedisplay.HEIGHT - 32,
+        center_text(draw, piratedisplay.height - 32,
                     '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(0xb0, 0xb0, 0xb0))
 
         if not initial:
@@ -254,12 +254,12 @@ class PirateAddon(xbmc.Monitor):
                 volume = max(0, volume - 5)
             xbmc.executebuiltin('SetVolume({})'.format(volume))
             draw = self.new_overlay(timeout=5)
-            draw.rectangle((piratedisplay.WIDTH - 10, 0,
-                            piratedisplay.WIDTH - 1, piratedisplay.HEIGHT - 1),
+            draw.rectangle((piratedisplay.width - 10, 0,
+                            piratedisplay.width - 1, piratedisplay.height - 1),
                            outline=(255, 255, 255), width=1)
-            y = (piratedisplay.HEIGHT - 2) * (100 - volume) // 100
-            draw.rectangle((piratedisplay.WIDTH - 9, y + 1,
-                            piratedisplay.WIDTH - 2, piratedisplay.HEIGHT - 2),
+            y = (piratedisplay.height - 2) * (100 - volume) // 100
+            draw.rectangle((piratedisplay.width - 9, y + 1,
+                            piratedisplay.width - 2, piratedisplay.height - 2),
                            fill=(0, 255, 0))
             self.redraw()
 

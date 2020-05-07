@@ -6,8 +6,8 @@ import spidev
 import threading
 import time
 
-WIDTH = 240
-HEIGHT = 240
+width = 240
+height = 240
 
 # BCM pins used by Pirate Audio boards
 BCM_LCD_DCX = 9         # command (low) / data (high) serial interface wire (D/CX)
@@ -231,13 +231,13 @@ class PirateDisplay:
         # set inverse mode
         self._command(INVON)
 
-        # set view range: columns 0 to WIDTH-1, rows 0 to HEIGHT-1
+        # set view range: columns 0 to width-1, rows 0 to height-1
         # parameters to CASET are: start column (high), start column (low),
         # end column (high), end column (low)
-        self._command(CASET, (0, 0, (WIDTH - 1) >> 8, (WIDTH - 1) & 0xff))
+        self._command(CASET, (0, 0, (width - 1) >> 8, (width - 1) & 0xff))
         # parameters to RASET are: start row (high), start row (low),
         # end row (high), end row (low)
-        self._command(RASET, (0, 0, (HEIGHT - 1) >> 8, (HEIGHT - 1) & 0xff))
+        self._command(RASET, (0, 0, (height - 1) >> 8, (height - 1) & 0xff))
 
         self.sleeping = True
 
