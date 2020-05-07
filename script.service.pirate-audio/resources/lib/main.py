@@ -339,7 +339,7 @@ class PirateAddon(xbmc.Monitor):
         self.redraw()
         # set timer to hide the screen after a minute, we don't want to
         # be burning it indefinitely
-        self.pause_timer = self.disp.add_user_timer(self.pause_timeout, self.hide)
+        self.pause_timer = self.disp.reset_user_timer(self.pause_timer, self.pause_timeout, self.hide)
 
 
     def next_action(self):
