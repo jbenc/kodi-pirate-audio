@@ -86,6 +86,9 @@ class PirateAddon(xbmc.Monitor):
         self.cur_action = 0
         self.action_switcher = 0
 
+        self.playing = False
+        self.paused = False
+
         self.disp = piratedisplay.PirateDisplay(button_repeat_hz=5, event=self.button_event)
 
 
@@ -243,22 +246,18 @@ class PirateAddon(xbmc.Monitor):
         center_text(draw, piratedisplay.height - self.font_sub_height,
                     '{} / {}'.format(elapsed, duration), font=self.font_sub, fill=(0xb0, 0xb0, 0xb0))
 
+        if self.paused:
+            center_text(draw, None, u'\u23f8', font=self.font_symxl)
+
         if not initial:
             self.redraw()
 
 
     def notification_play(self, method=None):
-        if method is None:
-            # autodetect
-            playing = bool(xbmc.getInfoLabel('Player.Duration'))
-        else:
-            if method == 'Player.OnPlay':
-                playing = True
-            elif method == 'Player.OnStop':
-                playing = False
-            else:
-                return
-        if playing:
+        # method will be None in the case of a fake event after mode switch
+        if method is not None and method != 'Player.OnPlay' and method != 'Player.OnStop':
+            return
+        if self.playing:
             cache = None
             icon = xbmc.getInfoLabel('Player.Art(thumb)')
             if icon:
@@ -319,6 +318,16 @@ class PirateAddon(xbmc.Monitor):
 
     def onNotification(self, sender, method, data):
         super(PirateAddon, self).onNotification(sender, method, data)
+        if method == 'Player.OnPlay':
+            self.playing = True
+            self.paused = False
+        elif method == 'Player.OnStop':
+            self.playing = False
+            self.paused = False
+        elif method == 'Player.OnPause':
+            self.paused = True
+        elif method == 'Player.OnResume':
+            self.paused = False
         action = self.actions[self.cur_action]
         if 'notification' in action:
             action['notification'](method)
