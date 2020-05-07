@@ -31,6 +31,19 @@ def center_text(draw, y, text, font, fill):
     draw.text(((piratedisplay.width - width) // 2, y), text, font=font, fill=fill)
 
 
+def boxed_text(draw, x, y, right_align, text, font, fill=(0xff, 0xee, 0x00), padding=(10, 2)):
+    bgfill = (0, 0, 0, 196)
+    height = sum(font.getmetrics()) + 2 * padding[1]
+    width = draw.textsize(text, font=font)[0] + 2 * padding[0]
+    y -= height // 2
+    if right_align:
+        x -= width
+    x2 = x + width
+    y2 = y + height
+    draw.rectangle((x, y, x2 - 1, y2 - 1), fill=bgfill)
+    draw.text((x + padding[0], y + padding[1]), text, font=font, fill=fill)
+
+
 class RpcError(Exception):
     pass
 
@@ -42,6 +55,8 @@ class PirateAddon(xbmc.Monitor):
                                                  30)
         self.font_sub = PIL.ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf',
                                                30)
+        self.font_sym = PIL.ImageFont.truetype('/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf',
+                                               32)
         self.font_title_height = sum(self.font_title.getmetrics())
         self.font_sub_height = sum(self.font_sub.getmetrics())
 
@@ -71,7 +86,6 @@ class PirateAddon(xbmc.Monitor):
         if path and not quadrant and self.img_bg_cache and self.img_bg_cache[:2] == (path, brightness):
             # the image is unchanged, use the cached version
             self.img_bg = self.img_bg_cache[2]
-            self.redraw()
             return
 
         res = PIL.Image.new('RGB', (piratedisplay.width, piratedisplay.height),
@@ -101,7 +115,6 @@ class PirateAddon(xbmc.Monitor):
                 res = enh.enhance(brightness)
         self.img_bg = res
         self.img_bg_cache = (path, brightness, res)
-        self.redraw()
 
 
     def new_overlay(self, timeout=None):
@@ -115,6 +128,14 @@ class PirateAddon(xbmc.Monitor):
         else:
             self.img_info = img
         return PIL.ImageDraw.Draw(img)
+
+
+    def set_help(self, topleft, topright, bottomleft, bottomright):
+        draw = self.new_overlay(timeout=10)
+        boxed_text(draw, 0, 71, False, topleft, self.font_sym)
+        boxed_text(draw, 0, piratedisplay.height - 52, False, bottomleft, self.font_sym)
+        boxed_text(draw, piratedisplay.width - 1, 71, True, topright, self.font_sym)
+        boxed_text(draw, piratedisplay.width - 1, piratedisplay.height - 52, True, bottomright, self.font_sym)
 
 
     def delete_popup(self, timer_id=None):
@@ -219,8 +240,10 @@ class PirateAddon(xbmc.Monitor):
                     # instead of the [])
                     cache = None
 
-            self.set_playing_info(initial=True)
             self.new_background(cache, 0.2)
+            self.set_playing_info(initial=True)
+            self.set_help(u'\u23ef', u'\U0001f50a', u'\u23ed', u'\U0001f509')
+            self.redraw()
             if self.img_info_timer is not None:
                 self.disp.del_user_timer(self.img_info_timer)
             self.img_info_timer = self.disp.add_recurrent_user_timer(1, self.set_playing_info)
@@ -247,6 +270,7 @@ class PirateAddon(xbmc.Monitor):
                 time.sleep(0.1)
             self.img_info = None
             self.new_background(filename, quadrant={ 'A':(0,0), 'B':(0,1), 'X':(1,0), 'Y':(1,1) }[button])
+            self.redraw()
             return
         if button in ('X', 'Y'):
             if state == 0:
