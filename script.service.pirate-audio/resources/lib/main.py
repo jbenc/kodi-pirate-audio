@@ -61,6 +61,11 @@ class RpcError(Exception):
 class PirateAddon(xbmc.Monitor):
     def __init__(self):
         super(PirateAddon, self).__init__()
+
+        self.pause_timeout = 60
+        self.help_timeout = 8
+        self.help_reshow_interval = 60
+
         self.font_title = PIL.ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Bold.ttf',
                                                  30)
         self.font_sub = PIL.ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSansNarrow-Regular.ttf',
@@ -96,7 +101,7 @@ class PirateAddon(xbmc.Monitor):
         self.playing = False
         self.paused = False
         self.pause_timer = None
-        self.pause_timeout = 60
+        self.last_help = None
 
         self.disp = piratedisplay.PirateDisplay(button_repeat_hz=5, event=self.button_event)
 
@@ -175,11 +180,12 @@ class PirateAddon(xbmc.Monitor):
 
     def set_help(self, topleft, topright, bottomleft, bottomright):
         fill = (0xff, 0xee, 0x00)
-        draw = self.new_overlay_popup(timeout=8)
+        draw = self.new_overlay_popup(timeout=self.help_timeout)
         boxed_text(draw, 0, 71, 'left', topleft, self.font_sym, fill)
         boxed_text(draw, 0, piratedisplay.height - 52, 'left', bottomleft, self.font_sym, fill)
         boxed_text(draw, piratedisplay.width - 1, 71, 'right', topright, self.font_sym, fill)
         boxed_text(draw, piratedisplay.width - 1, piratedisplay.height - 52, 'right', bottomright, self.font_sym, fill)
+        self.last_help = time.time()
 
 
     def delete_popup(self, timer_id=None):
@@ -191,6 +197,7 @@ class PirateAddon(xbmc.Monitor):
         self.remove_overlay_info()
         self.img_bg = None
         self.redraw()
+        self.last_help = time.time()
 
 
     def redraw(self):
@@ -304,7 +311,8 @@ class PirateAddon(xbmc.Monitor):
             self.remove_overlay_info()
             self.new_background(cache, 0.2)
             self.set_playing_info(initial=True)
-            self.set_help(u'\u23ef', u'\U0001f50a', u'\u23ed', u'\U0001f509')
+            if self.last_help is None or time.time() - self.last_help > self.help_reshow_interval:
+                self.set_help(u'\u23ef', u'\U0001f50a', u'\u23ed', u'\U0001f509')
             self.redraw()
             self.img_info_timer = self.disp.add_recurrent_user_timer(1, self.set_playing_info)
         else:
