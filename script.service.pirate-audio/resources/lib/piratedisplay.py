@@ -39,10 +39,20 @@ button_map = {
     BCM_BUTTON_Y: 'Y',
     BCM_BUTTON_Y2: 'Y',
 }
+button_map_90 = {
+    BCM_BUTTON_A: 'B',
+    BCM_BUTTON_B: 'Y',
+    BCM_BUTTON_X: 'A',
+    BCM_BUTTON_Y: 'X',
+    BCM_BUTTON_Y2: 'X',
+}
 
 
 class PirateDisplay:
-    def __init__(self, button_repeat_hz=3, event=None):
+    def __init__(self, button_repeat_hz=3, event=None, rotate=0):
+        # we currently support only rotate=0 and rotate=90
+        self.rotate = rotate
+        self.button_map = button_map_90 if rotate == 90 else button_map
         self.spi = spidev.SpiDev()
         # open /dev/spidev0.1
         self.spi.open(0, 1)
@@ -57,7 +67,7 @@ class PirateDisplay:
         GPIO.setup(BCM_LCD_BACKLIGHT, GPIO.OUT)
         # the buttons connect to ground when pressed; need to configure
         # with pull up resistors
-        GPIO.setup(tuple(button_map.keys()), GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(tuple(self.button_map.keys()), GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
         self.reset()
 
@@ -73,13 +83,13 @@ class PirateDisplay:
         # debouncing instead, using the RPi.GPIO interrupt only as a trigger
         # for a custom thread handling the debouncing. As such, we trigger
         # the interrupt on both edges.
-        self._button_state = { k: 0 for k in button_map }
-        self._button_reads = { k: 0 for k in button_map }
+        self._button_state = { k: 0 for k in self.button_map }
+        self._button_reads = { k: 0 for k in self.button_map }
         self._button_interrupt = threading.Event()
         self._button_debouncer_thread = threading.Thread(target=self._button_debouncer)
         self._button_debouncer_thread.daemon = True
         self._button_debouncer_thread.start()
-        for pin in button_map:
+        for pin in self.button_map:
             GPIO.add_event_detect(pin, GPIO.BOTH, lambda pin: self._button_interrupt.set())
 
 
@@ -107,7 +117,7 @@ class PirateDisplay:
             self._button_state[pin] = 0
             prev_pressed = False
         if self._user_event:
-            self._user_event(button_map[pin], int(pressed) + int(prev_pressed))
+            self._user_event(self.button_map[pin], int(pressed) + int(prev_pressed))
 
 
     def _button_debouncer(self):
@@ -152,7 +162,7 @@ class PirateDisplay:
                 for t in fire_timers:
                     t[3](t[2], *t[4], **t[5])
 
-            for pin in button_map:
+            for pin in self.button_map:
                 self._button_reads[pin] = 0
             while True:
                 done = 0
@@ -250,7 +260,7 @@ class PirateDisplay:
         time.sleep(0.120)
 
         # set normal display orientation and RGB order
-        self._command(MADCTL, b'\x00')
+        self._command(MADCTL, b'\x60' if self.rotate == 90 else b'\x00')
         # set 6 bits per color
         self._command(COLMOD, b'\x66')
         # set inverse mode
